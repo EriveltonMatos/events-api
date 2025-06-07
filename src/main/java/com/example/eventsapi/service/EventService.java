@@ -1,63 +1,79 @@
 package com.example.eventsapi.service;
 
-import com.example.eventsapi.dto.EventDTO;
+import com.example.eventsapi.dto.EventRequestDTO;
+import com.example.eventsapi.dto.EventResponseDTO;
 import com.example.eventsapi.entity.Event;
+import com.example.eventsapi.exception.EventNotFoundException;
+import com.example.eventsapi.mapper.EventMapper;
 import com.example.eventsapi.repository.EventRepository;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Optional;
+import java.util.stream.Collectors;
 
+@Slf4j
 @AllArgsConstructor
 @Service
 public class EventService {
     private final EventRepository eventRepository;
+    private final EventMapper eventMapper;
 
-    public List<Event> findAll() {
-        return eventRepository.findByDeletedFalse();
+    public List<EventResponseDTO> findAll() {
+        log.info("Buscando todos os eventos");
+        List<Event> events = eventRepository.findByDeletedFalse();
+        return events.stream()
+                .map(eventMapper::toResponseDTO)
+                .collect(Collectors.toList());
     }
 
-    public Page<Event> findAll(int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
-        return eventRepository.findByDeletedFalse(pageable);
+    public Page<EventResponseDTO> findAll(Pageable pageable) {
+        log.info("Buscando eventos paginados - página: {}, tamanho: {}",
+                pageable.getPageNumber(), pageable.getPageSize());
+        Page<Event> events = eventRepository.findByDeletedFalse(pageable);
+        return events.map(eventMapper::toResponseDTO);
     }
 
-    public Optional<Event> findById(Long id) {
-        return eventRepository.findByIdAndDeletedFalse(id);
+    public EventResponseDTO findById(Long id) {
+        log.info("Buscando evento com ID: {}", id);
+        Event event = eventRepository.findByIdAndDeletedFalse(id)
+                .orElseThrow(() -> new EventNotFoundException(id));
+        return eventMapper.toResponseDTO(event);
     }
 
-    public Event create(EventDTO eventDTO) {
-        Event event = new Event(eventDTO.getTitulo(), eventDTO.getDataHora(), eventDTO.getLocal());
-        return eventRepository.save(event);
+    @Transactional
+    public EventResponseDTO create(EventRequestDTO eventDTO) {
+        log.info("Criando novo evento: {}", eventDTO.getTitulo());
+        Event event = eventMapper.toEntity(eventDTO);
+        Event savedEvent = eventRepository.save(event);
+        log.info("Evento criado com sucesso. ID: {}", savedEvent.getId());
+        return eventMapper.toResponseDTO(savedEvent);
     }
 
-    public Optional<Event> update(Long id, EventDTO eventDTO) {
-        Optional<Event> optionalEvent = eventRepository.findByIdAndDeletedFalse(id);
+    @Transactional
+    public EventResponseDTO update(Long id, EventRequestDTO eventDTO) {
+        log.info("Atualizando evento com ID: {}", id);
+        Event event = eventRepository.findByIdAndDeletedFalse(id)
+                .orElseThrow(() -> new EventNotFoundException(id));
 
-        if (optionalEvent.isPresent()) {
-            Event event = optionalEvent.get();
-            event.setTitulo(eventDTO.getTitulo());
-            event.setDataHora(eventDTO.getDataHora());
-            event.setLocal(eventDTO.getLocal());
-            return Optional.of(eventRepository.save(event));
-        }
-
-        return Optional.empty();
+        eventMapper.updateEntity(event, eventDTO);
+        Event updatedEvent = eventRepository.save(event);
+        log.info("Evento atualizado com sucesso. ID: {}", id);
+        return eventMapper.toResponseDTO(updatedEvent);
     }
 
-    public boolean delete(Long id) {
-        Optional<Event> optionalEvent = eventRepository.findByIdAndDeletedFalse(id);
-        if (optionalEvent.isPresent()) {
-            Event event = optionalEvent.get();
-            event.setDeleted(true);
-            eventRepository.save(event);
-            return true;
-        }
-            return false;
-        }
-    }
+    @Transactional
+    public void delete(Long id) {
+        log.info("Removendo evento com ID: {}", id);
+        Event event = eventRepository.findByIdAndDeletedFalse(id)
+                .orElseThrow(() -> new EventNotFoundException(id));
 
+        event.setDeleted(true);
+        eventRepository.save(event);
+        log.info("Evento removido com sucesso. ID: {}", id);
+    }
+}
