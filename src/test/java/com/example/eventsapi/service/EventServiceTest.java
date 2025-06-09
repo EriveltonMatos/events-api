@@ -46,7 +46,6 @@ class EventServiceTest {
     @Test
     @DisplayName("findAll() deve retornar lista de eventos quando existirem eventos")
     void findAll_whenEventsExist_shouldReturnEventList() {
-        // Arrange
         Event event1 = createEvent(1L, "Evento 1");
         Event event2 = createEvent(2L, "Evento 2");
         List<Event> events = Arrays.asList(event1, event2);
@@ -58,10 +57,8 @@ class EventServiceTest {
         when(eventMapper.toResponseDTO(event1)).thenReturn(responseDTO1);
         when(eventMapper.toResponseDTO(event2)).thenReturn(responseDTO2);
 
-        // Act
         List<EventResponseDTO> result = eventService.findAll();
 
-        // Assert
         assertThat(result).hasSize(2);
         assertThat(result.get(0).getTitulo()).isEqualTo("Evento 1");
         assertThat(result.get(1).getTitulo()).isEqualTo("Evento 2");
@@ -73,7 +70,6 @@ class EventServiceTest {
     @Test
     @DisplayName("findAll(pageable) deve retornar página de eventos")
     void findAllPageable_whenEventsExist_shouldReturnPagedEvents() {
-        // Arrange
         Pageable pageable = PageRequest.of(0, 10);
         Event event = createEvent(1L, "Evento 1");
         Page<Event> eventPage = new PageImpl<>(Arrays.asList(event), pageable, 1);
@@ -82,10 +78,8 @@ class EventServiceTest {
         when(eventRepository.findByDeletedFalse(pageable)).thenReturn(eventPage);
         when(eventMapper.toResponseDTO(event)).thenReturn(responseDTO);
 
-        // Act
         Page<EventResponseDTO> result = eventService.findAll(pageable);
 
-        // Assert
         assertThat(result.getContent()).hasSize(1);
         assertThat(result.getContent().get(0).getTitulo()).isEqualTo("Evento 1");
         assertThat(result.getTotalElements()).isEqualTo(1);
@@ -96,7 +90,6 @@ class EventServiceTest {
     @Test
     @DisplayName("findById() deve retornar evento quando ID existir")
     void findById_whenEventExists_shouldReturnEvent() {
-        // Arrange
         Long eventId = 1L;
         Event event = createEvent(eventId, "Evento Teste");
         EventResponseDTO responseDTO = createEventResponseDTO(eventId, "Evento Teste");
@@ -104,10 +97,8 @@ class EventServiceTest {
         when(eventRepository.findByIdAndDeletedFalse(eventId)).thenReturn(Optional.of(event));
         when(eventMapper.toResponseDTO(event)).thenReturn(responseDTO);
 
-        // Act
         EventResponseDTO result = eventService.findById(eventId);
 
-        // Assert
         assertThat(result).isNotNull();
         assertThat(result.getId()).isEqualTo(eventId);
         assertThat(result.getTitulo()).isEqualTo("Evento Teste");
@@ -119,12 +110,10 @@ class EventServiceTest {
     @Test
     @DisplayName("findById() deve lançar exceção quando ID não existir")
     void findById_whenEventNotExists_shouldThrowException() {
-        // Arrange
         Long eventId = 999L;
 
         when(eventRepository.findByIdAndDeletedFalse(eventId)).thenReturn(Optional.empty());
 
-        // Act & Assert
         assertThatThrownBy(() -> eventService.findById(eventId))
                 .isInstanceOf(EventNotFoundException.class);
 
@@ -135,7 +124,6 @@ class EventServiceTest {
     @Test
     @DisplayName("create() deve criar e retornar novo evento")
     void create_whenValidData_shouldCreateAndReturnEvent() {
-        // Arrange
         EventRequestDTO requestDTO = createEventRequestDTO("Novo Evento");
         Event event = createEvent(null, "Novo Evento");
         Event savedEvent = createEvent(1L, "Novo Evento");
@@ -145,10 +133,8 @@ class EventServiceTest {
         when(eventRepository.save(event)).thenReturn(savedEvent);
         when(eventMapper.toResponseDTO(savedEvent)).thenReturn(responseDTO);
 
-        // Act
         EventResponseDTO result = eventService.create(requestDTO);
 
-        // Assert
         assertThat(result).isNotNull();
         assertThat(result.getId()).isEqualTo(1L);
         assertThat(result.getTitulo()).isEqualTo("Novo Evento");
@@ -161,7 +147,6 @@ class EventServiceTest {
     @Test
     @DisplayName("update() deve atualizar evento existente")
     void update_whenEventExists_shouldUpdateEvent() {
-        // Arrange
         Long eventId = 1L;
         EventRequestDTO requestDTO = createEventRequestDTO("Evento Atualizado");
         Event existingEvent = createEvent(eventId, "Evento Original");
@@ -172,10 +157,8 @@ class EventServiceTest {
         when(eventRepository.save(existingEvent)).thenReturn(updatedEvent);
         when(eventMapper.toResponseDTO(updatedEvent)).thenReturn(responseDTO);
 
-        // Act
         EventResponseDTO result = eventService.update(eventId, requestDTO);
 
-        // Assert
         assertThat(result).isNotNull();
         assertThat(result.getId()).isEqualTo(eventId);
         assertThat(result.getTitulo()).isEqualTo("Evento Atualizado");
@@ -189,13 +172,11 @@ class EventServiceTest {
     @Test
     @DisplayName("update() deve lançar exceção quando evento não existir")
     void update_whenEventNotExists_shouldThrowException() {
-        // Arrange
         Long eventId = 999L;
         EventRequestDTO requestDTO = createEventRequestDTO("Evento Atualizado");
 
         when(eventRepository.findByIdAndDeletedFalse(eventId)).thenReturn(Optional.empty());
 
-        // Act & Assert
         assertThatThrownBy(() -> eventService.update(eventId, requestDTO))
                 .isInstanceOf(EventNotFoundException.class);
 
@@ -207,17 +188,14 @@ class EventServiceTest {
     @Test
     @DisplayName("delete() deve fazer soft delete do evento")
     void delete_whenEventExists_shouldSoftDeleteEvent() {
-        // Arrange
         Long eventId = 1L;
         Event event = createEvent(eventId, "Evento a ser deletado");
         event.setDeleted(false);
 
         when(eventRepository.findByIdAndDeletedFalse(eventId)).thenReturn(Optional.of(event));
 
-        // Act
         eventService.delete(eventId);
 
-        // Assert
         assertThat(event.isDeleted()).isTrue();
 
         verify(eventRepository).findByIdAndDeletedFalse(eventId);
@@ -227,12 +205,10 @@ class EventServiceTest {
     @Test
     @DisplayName("delete() deve lançar exceção quando evento não existir")
     void delete_whenEventNotExists_shouldThrowException() {
-        // Arrange
         Long eventId = 999L;
 
         when(eventRepository.findByIdAndDeletedFalse(eventId)).thenReturn(Optional.empty());
 
-        // Act & Assert
         assertThatThrownBy(() -> eventService.delete(eventId))
                 .isInstanceOf(EventNotFoundException.class);
 
@@ -240,7 +216,6 @@ class EventServiceTest {
         verify(eventRepository, never()).save(any());
     }
 
-    // Métodos auxiliares para criar objetos de teste
     private Event createEvent(Long id, String titulo) {
         Event event = new Event();
         event.setId(id);
